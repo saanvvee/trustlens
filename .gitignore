@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+
+# Project artefacts
+models/
+chroma_db/
+data/raw/
+*.db
+*.sqlite
+*.sqlite3
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
