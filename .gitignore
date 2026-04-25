@@ -18,6 +18,10 @@ env/
 models/
 chroma_db/
 data/raw/
+# split CSVs are large (70 MB train) but deterministic — re-run notebooks/01_eda.ipynb to regenerate
+data/processed/train.csv
+data/processed/val.csv
+data/processed/test.csv
 *.db
 *.sqlite
 *.sqlite3
