@@ -30,3 +30,7 @@ data/processed/test.csv
 .DS_Store
 .vscode/
 .idea/
+
+# personal viva notes (lives anywhere in tree)
+viva
+viva.md
