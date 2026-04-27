@@ -90,7 +90,7 @@ class VectorStore:
             return 0.0
         return sum(n["label"] for n in neighbors) / len(neighbors)
 
-    def deduplicate(self, texts, labels, threshold: float = 0.05):
+    def deduplicate(self, texts, labels, ids=None, threshold: float = 0.05):
         """Drop near-duplicate postings before fine-tuning.
 
         Strategy:
@@ -99,7 +99,9 @@ class VectorStore:
         3. Walk the list, keeping a row only if its cosine distance
            to every already-kept row is >= threshold.
 
-        Returns ``(kept_texts, kept_labels)`` preserving order.
+        Returns ``(kept_texts, kept_labels)`` if ``ids`` is None,
+        otherwise ``(kept_texts, kept_labels, kept_ids)`` so the
+        caller can pass them straight to ``build_index``.
         """
         import numpy as np
         texts = list(texts)
@@ -115,4 +117,9 @@ class VectorStore:
                 if float((1.0 - sims).min()) < threshold:
                     continue
             kept.append(i)
-        return [texts[i] for i in kept], [labels[i] for i in kept]
+        kept_texts = [texts[i] for i in kept]
+        kept_labels = [labels[i] for i in kept]
+        if ids is None:
+            return kept_texts, kept_labels
+        ids = list(ids)
+        return kept_texts, kept_labels, [ids[i] for i in kept]

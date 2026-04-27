@@ -53,13 +53,17 @@ This is the **only** ChromaDB output that ever flows into an LLM
 prompt — and it flows in as a number, not as text. That single fact
 is what keeps this design out of RAG territory.
 
-### `deduplicate(texts, labels, threshold=0.05)`
+### `deduplicate(texts, labels, ids=None, threshold=0.05)`
 
 - Embed every text in one batch via `self.embedder`.
 - L2-normalise each vector so cosine similarity reduces to a plain
   dot product.
 - Walk through the list keeping each row only if its cosine distance
   to every already-kept row is `>= threshold`.
+
+If `ids` is passed, the function returns `(kept_texts, kept_labels,
+kept_ids)` so the caller can hand the result straight to
+`build_index`. Otherwise it returns `(kept_texts, kept_labels)`.
 
 `threshold=0.05` means "if two postings differ by less than 5% of
 their cosine angle, drop the second one." That catches reposted scams
