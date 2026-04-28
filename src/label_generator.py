@@ -134,7 +134,7 @@ async def run(input_csv, output_path, n, dry_run):
         if label is None:
             return None
         return {"job_id": int(row.job_id), "fraudulent": int(row.fraudulent),
-                "neighbor_fraud_rate": nfr,
+                "job_text": row.job_text, "neighbor_fraud_rate": nfr,
                 **{f"feat_{k}": v for k, v in feats.items()}, **label}
 
     output = []
