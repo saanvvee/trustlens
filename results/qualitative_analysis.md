@@ -5,6 +5,21 @@ Source: `results/errors_<model>.csv` (output of `python -m src.error_analyzer`).
 
 All models evaluated on the same 20-row Kaggle val subset.
 
+> **⚠ Note on the `Fine-tuned` column below.** These error counts come
+> from `scripts/convert_kaggle.py`, which extracts actions from raw
+> Kaggle JSONLs via a regex on the `Answer: <digit>` pattern. The
+> extraction works correctly for DistilBERT, Phi-3 zero-shot, and
+> Phi-3 few-shot, but mis-reads the LoRA fine-tune's prompt-echo
+> output, making LoRA look like it always predicted "safe".
+> The **authoritative** LoRA evaluation lives in
+> [comparison_table.md](comparison_table.md) "Headline metrics" — there
+> the LoRA F1 is **0.476** vs baseline **0.421** (a 13 % relative
+> improvement), and LoRA flipped 2 baseline "Safe" decisions to
+> "Avoid" (more cautious behaviour). The interpretation below
+> applies to the *other three models* cleanly; for LoRA, treat the
+> "missed_red_flag" count as an artefact and read the headline
+> table instead.
+
 ## Error counts by category
 
 | Category | DistilBERT | Phi-3 zero | Phi-3 few | Fine-tuned |
