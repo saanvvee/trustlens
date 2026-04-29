@@ -84,18 +84,38 @@ def _llm_phi3_with_adapter(adapter_path):
 
 
 def _llm_hf_api():
-    """Llama-3.3-70B-Instruct via HF Inference API. No GPU needed."""
-    from langchain_huggingface import HuggingFaceEndpoint
+    """Llama-3.3-70B-Instruct via Groq's direct API (free, fast).
 
+    We originally used HuggingFace Inference API but hit two walls:
+    1. HF auto-routes Llama-3.3-70B to Groq, which only supports the
+       'conversational' endpoint (not LangChain's default text-generation).
+    2. The HF free tier rate-limits and 402s once monthly credits are gone.
+
+    Groq's own free tier is much more generous (~30 RPM, 14400 RPD) and
+    serves Llama-3.3-70B directly. Get a key at console.groq.com and
+    set GROQ_API_KEY in .env.
+
+    Falls back to ChatHuggingFace if no GROQ_API_KEY is available.
+    """
+    if os.environ.get("GROQ_API_KEY"):
+        from langchain_groq import ChatGroq
+        return ChatGroq(
+            model="llama-3.3-70b-versatile",
+            temperature=0.2,
+            max_tokens=512,
+            api_key=os.environ["GROQ_API_KEY"],
+        )
+    from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
     token = os.environ.get("HF_TOKEN")
     if not token:
-        raise SystemExit("HF_TOKEN not set; add it to .env")
-    return HuggingFaceEndpoint(
+        raise SystemExit("Set GROQ_API_KEY (preferred) or HF_TOKEN in .env")
+    llm = HuggingFaceEndpoint(
         repo_id="meta-llama/Llama-3.3-70B-Instruct",
-        max_new_tokens=512,
-        temperature=0.2,
+        task="conversational",
+        max_new_tokens=512, temperature=0.2,
         huggingfacehub_api_token=token,
     )
+    return ChatHuggingFace(llm=llm)
 
 
 def build_agent(adapter_path: str = None) -> AgentExecutor:

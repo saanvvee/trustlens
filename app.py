@@ -8,16 +8,27 @@ agent uses Llama-3.3-70B via HF Inference API by default; swap to
 the fine-tuned Phi-3 LoRA path by passing an ``adapter_path`` in
 ``src/agent.py``'s ``build_agent``.
 """
-import json
-
-import plotly.graph_objects as go
 import streamlit as st
 
-from src.db import get_recent_predictions
+# st.set_page_config MUST be the very first Streamlit call.
+# Anything else above this (st.write, etc.) crashes the app.
+st.set_page_config(page_title="TrustLens", page_icon="🔍", layout="wide")
+
+import os
+import json
+import plotly.graph_objects as go
+
+from src.db import get_recent_predictions, init_db
 from src.pipeline import analyze_job
 from src.vector_store import VectorStore
 
-st.set_page_config(page_title="TrustLens", page_icon="🔍", layout="wide")
+# absolute path so the DB lands in the project root no matter what
+# directory Streamlit was launched from
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trustlens.db")
+
+# create the SQLite tables on app startup so the sidebar query
+# doesn't crash on a fresh install
+init_db(DB_PATH)
 
 ACTION_COLORS = {"avoid": "#d9534f", "caution": "#f0ad4e", "safe": "#5cb85c"}
 
@@ -62,7 +73,7 @@ st.caption("Paste a job posting; get a structured trust assessment with reasonin
 
 with st.sidebar:
     st.header("Recent analyses")
-    for r in get_recent_predictions(limit=10):
+    for r in get_recent_predictions(limit=10, path=DB_PATH):
         with st.container(border=True):
             st.markdown(f"**{r['action'].upper()}** · score {r['trust_score']}")
             st.caption(r["job_text"][:120] + ("…" if len(r["job_text"]) > 120 else ""))
@@ -80,7 +91,7 @@ posting = st.text_area(
 
 if st.button("Analyze", type="primary", disabled=len(posting) < 50):
     with st.spinner("Calling agent (this can take 30–60s on free tier)..."):
-        result = analyze_job(posting)
+        result = analyze_job(posting, db_path=DB_PATH)
 
     if "error" in result:
         st.error(f"Couldn't get a clean assessment: {result['error']}")

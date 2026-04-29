@@ -72,21 +72,24 @@ ROLE_BENCHMARKS = {
 
 
 @tool
-def analyze_salary_realism(role: str, salary_text: str, location: str) -> str:
+def analyze_salary_realism(text: str) -> str:
     """Compare a posted salary to a benchmark band for the role family.
 
+    Pass a single string containing the role title, salary, and
+    optionally location — any free-form format works
+    (e.g. "Senior Backend Engineer, $180,000-$260,000, San Francisco").
     Returns 'plausible', 'suspiciously high', 'unparseable', or
-    'no benchmark for role'. Location is currently unused but kept
-    in the signature so the agent can pass it for future cost-of-
-    living adjustments.
+    'no benchmark for role'.
     """
-    nums = [int(n.replace(",", ""))
-            for n in re.findall(r"[\d,]+", salary_text or "")]
+    text = text or ""
+    lower = text.lower()
+    # require at least one digit to avoid matching lone commas
+    nums = [int(n.replace(",", "")) for n in re.findall(r"\d[\d,]*", text)]
     if not nums:
         return "unparseable"
     posted = max(nums)
     for key, (_, hi) in ROLE_BENCHMARKS.items():
-        if key in (role or "").lower():
+        if key in lower:
             return "suspiciously high" if posted > hi * 2 else "plausible"
     return "no benchmark for role"
 
