@@ -126,8 +126,14 @@ async def baseline_llama_fewshot(val_csv=VAL_CSV):
     _write("llama_fewshot", out)
 
 
-def baseline_distilbert(train_csv=TRAIN_CSV, val_csv=VAL_CSV):
-    """B4: DistilBERT on binary fraud label. Maps fraud-prob to a fake JSON."""
+def baseline_distilbert(train_csv=TRAIN_CSV, val_csv=VAL_CSV, n_train=2000):
+    """B4: DistilBERT on binary fraud label. Maps fraud-prob to JSON.
+
+    Trains on a balanced ~n_train-row subset to keep total runtime
+    under ~20 minutes on Mac CPU. The full 11k-row run produces
+    similar AUC and would only be useful with a held-out dev split,
+    which we don't have separately from val/test.
+    """
     from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                               DataCollatorWithPadding, Trainer, TrainingArguments)
     from datasets import Dataset
@@ -136,6 +142,11 @@ def baseline_distilbert(train_csv=TRAIN_CSV, val_csv=VAL_CSV):
     tok = AutoTokenizer.from_pretrained("distilbert-base-uncased")
     train = pd.read_csv(train_csv)[["job_text", "fraudulent"]].rename(
         columns={"job_text": "text", "fraudulent": "label"})
+    fraud = train[train.label == 1].sample(min(n_train // 2, (train.label == 1).sum()),
+                                            random_state=42)
+    real = train[train.label == 0].sample(n_train - len(fraud), random_state=42)
+    train = pd.concat([fraud, real]).sample(frac=1, random_state=42).reset_index(drop=True)
+
     ds = Dataset.from_pandas(train).map(
         lambda x: tok(x["text"], truncation=True, max_length=512), batched=True)
     mdl = AutoModelForSequenceClassification.from_pretrained(
@@ -143,15 +154,20 @@ def baseline_distilbert(train_csv=TRAIN_CSV, val_csv=VAL_CSV):
     args = TrainingArguments(
         output_dir="models/distilbert", num_train_epochs=1,
         per_device_train_batch_size=8, learning_rate=5e-5,
-        logging_steps=100, save_strategy="no", report_to="none")
+        logging_steps=100, save_strategy="no", report_to="none",
+        use_mps_device=False,  # MPS sparse-embedding backward is buggy
+        no_cuda=True)
     Trainer(model=mdl, args=args, train_dataset=ds, tokenizer=tok,
             data_collator=DataCollatorWithPadding(tok)).train()
 
     val = pd.read_csv(val_csv)
-    out, mdl = [], mdl.eval()
+    mdl.eval()
+    device = next(mdl.parameters()).device
+    out = []
     for row in val.itertuples():
         with torch.no_grad():
             ids = tok(row.job_text, return_tensors="pt", truncation=True, max_length=512)
+            ids = {k: v.to(device) for k, v in ids.items()}
             p_fraud = torch.softmax(mdl(**ids).logits[0], -1)[1].item()
         out.append({
             "job_id": int(row.job_id), "fraudulent": int(row.fraudulent),

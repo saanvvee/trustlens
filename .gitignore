@@ -34,3 +34,7 @@ data/processed/test.csv
 # personal viva notes (lives anywhere in tree)
 viva
 viva.md
+
+# stray local zips and editor workspace files
+*.zip
+*.code-workspace
