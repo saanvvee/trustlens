@@ -100,7 +100,10 @@ async def baseline_llama_fewshot(val_csv=VAL_CSV):
     examples = _load_examples(3)
     df = pd.read_csv(val_csv)
     vs = VectorStore()
-    client = AsyncInferenceClient(token=token)
+    # provider="hf-inference" forces HF's legacy direct route instead of
+    # auto-routing to Groq, which requires a token with inference-provider
+    # access that free Read tokens don't have.
+    client = AsyncInferenceClient(token=token, provider="hf-inference")
     sem = asyncio.Semaphore(CONCURRENCY)
 
     async def task(row):

@@ -1,0 +1,22 @@
+job_id,true_fraud,predicted_action,trust_score,suggested_category,reasoning,job_text_preview
+3,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,
+5,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,"[TITLE] Bill Review Manager
+[LOCATION] US, FL, Fort Worth
+[EMPLOYMENT TYPE] Full-time
+[INDUSTRY] Hospital & Health Care
+[COMPANY PROFILE] SpotSource Solutions LLC is a Global Human Capital Management "
+6,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,"[TITLE] Accounting Clerk
+[LOCATION] US, MD,
+[DESCRIPTION] Job OverviewApex is an environmental consulting firm that offers stable leadership and growth and views employees as valuable resources. We ar"
+7,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,
+8,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,
+9,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,
+10,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,"[TITLE] Customer Service Associate - Part Time
+[LOCATION] US, AZ, Phoenix
+[EMPLOYMENT TYPE] Part-time
+[INDUSTRY] Financial Services
+[COMPANY PROFILE] Novitex Enterprise Solutions, formerly Pitney Bowe"
+12,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,
+16,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,
+17,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,
+19,1,safe,90,missed_red_flag,Kaggle predicted class 0 (binary).,

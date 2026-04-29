@@ -1,0 +1,14 @@
+job_id,true_fraud,predicted_action,trust_score,suggested_category,reasoning,job_text_preview
+1,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
+2,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
+4,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
+11,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
+13,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
+14,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,"[TITLE] Installers
+[LOCATION] US, FL, Orlando
+[EMPLOYMENT TYPE] Full-time
+[INDUSTRY] Events Services
+[COMPANY PROFILE] Growing event production company providing staging, scenic, and drapery primarily"
+15,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
+18,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
+20,0,avoid,10,false_red_flag,Kaggle predicted class 1 (binary).,
