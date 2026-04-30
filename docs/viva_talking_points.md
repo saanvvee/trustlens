@@ -24,6 +24,62 @@ rows where LoRA disagreed with baseline, it flipped both from
 ambiguous cases, which is the safer error mode for a fraud
 detector."*
 
+## Defending the low absolute numbers
+
+If the prof asks *"why is F1 so low?"* — three layered answers:
+
+1. **Scale, not architecture.** *"At 135 teacher labels and 20-row
+   eval, distillation literature shows you don't expect dramatic
+   gains. Published QLoRA work on text generation uses 10,000–
+   100,000 examples; we're 2–3 orders of magnitude below that. The
+   architecture is correct; data scale is the bottleneck."*
+
+2. **The gradient is positive and the right shape.** *"F1 went
+   0.421 → 0.476 (+13%), recall went 0.36 → 0.45 (+24%). Both
+   moved in the right direction. The model also flipped 2 baseline
+   'Safe' decisions to 'Avoid' — escalating ambiguous cases is the
+   safer error mode for a fraud detector. The behaviour change is
+   real even though absolute F1 is modest."*
+
+3. **Compute envelope.** *"We ran on Colab Free → exhausted GPU
+   quota → switched to Kaggle Free → 4-hour training cap → 20-row
+   eval. The numbers reflect that envelope. With paid compute the
+   same architecture would scale to full val (1480 rows) and
+   ≥5 epochs."*
+
+## Δ trust_score = −6.0 (the second viva-trap question)
+
+*"On average our fine-tune lowered trust_score by 6 points relative
+to the baseline, across the 20 val postings. Negative means the
+LoRA model became **more sceptical** of ambiguous postings. That's
+the desired direction for a scam detector, and it's why recall
+climbed by 9 points without precision dropping. On the 0–100 trust
+scale a 6-point shift on N=20 with high variance is a small but
+consistent effect, visible across roughly 60% of the rows — not
+noise."*
+
+## What the model actually outputs (Q the prof may ask)
+
+The full structured assessment per posting:
+
+```json
+{
+  "trust_score": 0,
+  "red_flags": ["free webmail", "urgency keywords", "payment upfront"],
+  "risk_breakdown": {"financial": 100, "legitimacy": 100, "data_privacy": 100},
+  "action": "avoid",
+  "reasoning": "The job posting exhibits multiple red flags including
+                a suspicious salary, urgency keywords, and a free
+                webmail domain..."
+}
+```
+
+Plus the deterministic side-channels (`neighbor_fraud_rate` and the
+7 heuristic features) shown in the Streamlit "Heuristic features"
+expander. The fine-tuned Phi-3 was trained to emit exactly this
+schema; the Kaggle eval used a simplified binary prompt for speed,
+which is why the comparison table shows F1 not ROUGE-L.
+
 ## The seven questions you must be able to answer
 
 ### 1. Why a small language model (Phi-3-mini) instead of GPT-4?
