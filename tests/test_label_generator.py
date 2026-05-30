@@ -1,9 +1,5 @@
 """Pytest cases for src.label_generator._parse_json.
 
-The async / network parts of the file are not unit-tested — they're
-exercised end-to-end by the --dry-run flag. The JSON parser is the
-brittle bit (models add fences, prose, trailing commas), so it gets
-focused tests.
 """
 from src.label_generator import _parse_json, build_user_prompt
 

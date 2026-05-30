@@ -1,13 +1,4 @@
-"""Streamlit frontend for TrustLens.
 
-Run from project root:
-    streamlit run app.py
-
-Calls ``src.pipeline.analyze_job`` for every assessment. Backend
-agent uses Llama-3.3-70B via HF Inference API by default; swap to
-the fine-tuned Phi-3 LoRA path by passing an ``adapter_path`` in
-``src/agent.py``'s ``build_agent``.
-"""
 import streamlit as st
 
 # st.set_page_config MUST be the very first Streamlit call.

@@ -1,10 +1,4 @@
-"""Pytest cases for src/features.py.
 
-Each signal has at least one positive case (the heuristic should fire)
-and one negative case (it should stay quiet on normal text). If a future
-edit breaks one of these, the heuristic has changed meaning — worth
-re-thinking, not just patching the test.
-"""
 from src.features import (
     salary_range_pattern,
     urgency_keywords,

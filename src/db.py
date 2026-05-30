@@ -15,7 +15,7 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 
-DEFAULT_PATH = "trustlens.db"
+DEFAULT_PATH = "/Users/saanveesharma/trustlens/trustlens.db"
 
 CREATE_PREDICTIONS = """
 CREATE TABLE IF NOT EXISTS predictions (
@@ -115,12 +115,26 @@ def log_error(prediction_id, error_category, notes="", path=DEFAULT_PATH):
 
 
 def get_recent_predictions(limit=20, path=DEFAULT_PATH):
-    """Most-recent-first list of prediction dicts.
-    Drives the Streamlit 'Recent analyses' sidebar.
-    """
+    """Most-recent-first list of prediction dicts."""
+
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     try:
+        # 🔥 hard-create table here (no dependency on anything else)
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_text TEXT NOT NULL,
+            trust_score INTEGER NOT NULL,
+            action TEXT NOT NULL,
+            reasoning TEXT,
+            red_flags_json TEXT,
+            risk_breakdown_json TEXT,
+            created_at TEXT NOT NULL
+        )
+        """)
+        conn.commit()
+
         rows = conn.execute(
             "SELECT id, job_text, trust_score, action, reasoning,"
             " red_flags_json, risk_breakdown_json, created_at"
@@ -129,6 +143,7 @@ def get_recent_predictions(limit=20, path=DEFAULT_PATH):
         ).fetchall()
     finally:
         conn.close()
+
     return [{
         "id": r["id"],
         "job_text": r["job_text"],
