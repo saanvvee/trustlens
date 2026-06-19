@@ -242,17 +242,6 @@ Pinned in `requirements.txt`. Highlights:
 - **Colab Free T4 (15 GB VRAM):** runs the QLoRA fine-tune and the
   Phi-3 baselines (B1/B2/B4).
 
-## Rubric mapping
-
-| Rubric item | Where it's satisfied |
-|---|---|
-| Application-specific dataset, preprocessed, stratified train/val/test split | `notebooks/01_eda.ipynb` (STEP 3) |
-| PEFT fine-tuning (QLoRA on Phi-3-mini) with written justification | `notebooks/03_fine_tune.ipynb` + the "Why each choice" section above |
-| Baseline comparison: zero-shot LLM, few-shot LLM, non-LLM classifier | `src/baselines.py` — B1 (Phi-3 zero-shot), B2 (Phi-3 few-shot), B3 (Llama-3.3-70B few-shot), B4 (DistilBERT) |
-| Dual storage: ChromaDB (vector) + SQLite (relational) | `src/vector_store.py` + `src/db.py` |
-| Quantitative eval: ROUGE-L, F1, MAE, JSON-validity | `src/evaluate.py` → `results/comparison_table.md` |
-| Qualitative + error analysis | `src/error_analyzer.py` → `results/errors_for_review.csv` |
-| Improvement over baselines + real-world applicability | `results/comparison.png` + Streamlit demo (`app.py`) |
 
 ## Limitations and future work
 
