@@ -23,6 +23,12 @@ from src.tools import ALL_TOOLS
 
 load_dotenv()
 
+# Groq retires models fairly often — llama-3.3-70b-versatile was pulled
+# from the catalogue and started 404-ing. Reading the name from the
+# environment means the next retirement is a config change, not a code
+# change. Check console.groq.com/docs/models for what's currently live.
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+
 REACT_PROMPT = PromptTemplate.from_template(
     """You are a fraud-detection analyst reviewing online job postings.
 
@@ -45,6 +51,9 @@ Final Answer: a single JSON object with these exact keys:
   risk_breakdown ({{"financial": int 0-100, "legitimacy": int 0-100, "data_privacy": int 0-100}}),
   action ("avoid" or "caution" or "safe"),
   reasoning (1-3 sentences).
+
+Your last line MUST begin with the literal text "Final Answer:" followed
+by the JSON object. A bare JSON object without that prefix is rejected.
 
 Begin!
 
@@ -100,9 +109,14 @@ def _llm_hf_api():
     if os.environ.get("GROQ_API_KEY"):
         from langchain_groq import ChatGroq
         return ChatGroq(
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.2,
-            max_tokens=512,
+            # Qwen is the one model in Groq's current catalogue that
+            # emits the Thought/Action/Action Input protocol this agent
+            # needs. gpt-oss returns bare JSON with no "Final Answer:"
+            # prefix, which the LangChain ReAct parser rejects outright.
+            # 1024 leaves room for a few tool-call rounds.
+            max_tokens=1024,
             api_key=os.environ["GROQ_API_KEY"],
         )
     from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
