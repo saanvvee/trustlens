@@ -1,4 +1,46 @@
+---
+title: TrustLens
+emoji: 🔍
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: Paste a job posting, get a structured scam-risk assessment.
+---
+
 # TrustLens
+
+> **TL;DR** — Paste a job/freelance posting, get a structured scam-risk
+> assessment (trust score, red flags, action, reasoning). A QLoRA
+> fine-tune of Phi-3-mini lifts action-F1 from 0.421 → **0.476 (+13 %
+> relative)** over the un-fine-tuned baseline — catching more scams
+> without extra false alarms — served through the Streamlit dashboard below.
+
+![TrustLens dashboard analyzing a scam posting](results/dashboard.png)
+
+## Results
+
+Action-F1 on the same 20-row stratified val subset (ground truth =
+Kaggle `fraudulent` 0/1, `Avoid → 1`). Rows 3–4 are the headline
+LoRA-vs-baseline comparison.
+
+| # | Model | Type | F1 | Precision | Recall |
+|---|---|---|---:|---:|---:|
+| 1 | DistilBERT classifier | Non-LLM baseline | 0.154 | 0.500 | 0.091 |
+| 2 | Phi-3-mini zero-shot | Pre-trained LLM | 0.167 | 1.000 | 0.091 |
+| 3 | **Phi-3-mini baseline** (no fine-tune) | **Authoritative LLM baseline** | **0.421** | **0.500** | **0.364** |
+| 4 | **Phi-3-mini + LoRA fine-tune** | **Our fine-tune** | **0.476** | **0.500** | **0.455** |
+| 5 | Phi-3-mini few-shot (3-ICL) | Prompt-engineered | 0.710 | 0.550 | 1.000 |
+
+**Headline:** the LoRA fine-tune lifted F1 from 0.421 → **0.476 (+13 %
+relative)** over the un-fine-tuned baseline. Recall gained more than
+precision (0.36 → 0.45), so fine-tuning made the model **catch more
+scams** without flagging extra real postings. Full breakdown,
+behavioural comparison, and evaluation caveats (N = 20, class balance)
+live in [results/comparison_table.md](results/comparison_table.md).
+
+## What it does
 
 LLM-powered tool that evaluates online job/freelance postings for
 scam risk and produces a structured trust assessment.
@@ -13,7 +55,7 @@ For each posting it returns:
 ## Problem
 
 Online job boards leak scams that look like legitimate openings.
-Common patterns: unrealistic pay, urgent hiring, payment-upfront
+Common patterns: unrealis tic pay, urgent hiring, payment-upfront
 requests, contact via free webmail, vague company descriptions. A
 binary "is fraud" classifier doesn't help a candidate — they want
 to know *why* a posting looks risky. TrustLens produces a

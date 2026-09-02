@@ -1,31 +1,39 @@
-# Core LLM stack
-transformers==4.45.2
-peft==0.13.2
-bitsandbytes==0.44.1
-accelerate==1.0.1
-datasets==3.0.2
-torch==2.4.1
+# Runtime deps for the deployed Streamlit demo ONLY.
+# Training/eval pins (torch CUDA, peft, bitsandbytes, datasets) live in
+# requirements-dev.txt — installing those here would blow the build size
+# and bitsandbytes is CUDA-only, so it is useless on a CPU host anyway.
+#
+# Versions match the working local venv. In particular chromadb MUST stay
+# on 1.x: chroma_db/ was written by 1.5.8 and its migrations are
+# forward-only, so an older pin cannot open the index.
 
-# Orchestration + OpenAI client
-langchain==0.3.7
-langchain-openai==0.2.5
-langchain-community==0.3.5
-openai==1.54.3
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 # Frontend + plotting
-streamlit==1.39.0
-plotly==5.24.1
+streamlit==1.50.0
+plotly==6.7.0
 
-# Data + classical ML
-pandas==2.2.3
-scikit-learn==1.5.2
+# Orchestration + Groq-hosted Llama-3.3-70B (the no-GPU demo path)
+langchain==0.3.28
+langchain-core==0.3.84
+langchain-community==0.3.31
+langchain-groq==0.3.8
+langchain-huggingface==0.3.1
 
 # Embeddings + vector DB
-sentence-transformers==3.2.1
-chromadb==0.5.15
+chromadb==1.5.8
+sentence-transformers==5.1.2
+transformers==4.57.6
+torch==2.8.0
 
-# Eval + utilities
-rouge-score==0.1.2
-nltk==3.9.1
-pytest==8.3.3
-python-dotenv==1.0.1
+# Data
+pandas==2.3.3
+numpy==2.0.2
+
+# Utilities
+python-dotenv==1.2.1
+huggingface-hub==0.36.2
+
+# Streamlit Cloud's system sqlite3 predates the 3.35 chromadb needs.
+# Linux-only wheel; the marker keeps `pip install -r` working on macOS.
+pysqlite3-binary==0.5.4; sys_platform == "linux"

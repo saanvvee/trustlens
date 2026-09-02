@@ -11,6 +11,19 @@ back into the LLM prompt. Its three jobs:
 3. ``deduplicate(texts, labels, threshold)`` drops near-duplicates
    before fine-tuning so the model never trains on copy-paste scams.
 """
+import os
+import sys
+
+# Streamlit Community Cloud ships a system sqlite3 older than the 3.35
+# chromadb requires. pysqlite3-binary is a newer build; swapping it into
+# sys.modules before chromadb imports makes chroma pick it up. Linux-only
+# wheel, so the ImportError path is the normal case on macOS.
+try:
+    __import__("pysqlite3")
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
+
 import chromadb
 from chromadb.utils import embedding_functions
 
@@ -18,9 +31,33 @@ DEFAULT_PATH = "./chroma_db"
 COLLECTION_NAME = "trustlens"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
+# chroma.sqlite3 is 173 MB — over GitHub's 100 MB per-file limit, so it
+# can't ride along in the deploy repo. It lives in a free HF dataset repo
+# and is pulled once on first boot instead.
+INDEX_DATASET = "SAANVEE/trustlens-chroma"
+
+
+def _ensure_index(path: str) -> None:
+    """Download the prebuilt index if this checkout doesn't have one.
+
+    No-op locally, where chroma_db/ already exists. On a fresh Streamlit
+    Cloud container it fetches ~179 MB, which is why the first request
+    after a cold start is slow.
+    """
+    if os.path.exists(os.path.join(path, "chroma.sqlite3")):
+        return
+    from huggingface_hub import snapshot_download
+
+    snapshot_download(
+        repo_id=INDEX_DATASET,
+        repo_type="dataset",
+        local_dir=path,
+    )
+
 
 class VectorStore:
     def __init__(self, path: str = DEFAULT_PATH):
+        _ensure_index(str(path))
         # PersistentClient writes to disk so we don't re-embed the whole
         # training set every time the kernel restarts.
         self.client = chromadb.PersistentClient(path=str(path))

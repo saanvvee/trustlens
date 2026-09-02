@@ -1,0 +1,31 @@
+# Core LLM stack
+transformers==4.45.2
+peft==0.13.2
+bitsandbytes==0.44.1
+accelerate==1.0.1
+datasets==3.0.2
+torch==2.4.1
+
+# Orchestration + OpenAI client
+langchain==0.3.7
+langchain-openai==0.2.5
+langchain-community==0.3.5
+openai==1.54.3
+
+# Frontend + plotting
+streamlit==1.39.0
+plotly==5.24.1
+
+# Data + classical ML
+pandas==2.2.3
+scikit-learn==1.5.2
+
+# Embeddings + vector DB
+sentence-transformers==3.2.1
+chromadb==0.5.15
+
+# Eval + utilities
+rouge-score==0.1.2
+nltk==3.9.1
+pytest==8.3.3
+python-dotenv==1.0.1
