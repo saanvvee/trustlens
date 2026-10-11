@@ -180,10 +180,10 @@ with st.sidebar:
 
 # ---------- main: hero ----------
 st.markdown(
-    "<div class='eyebrow'>Job posting scam detector</div>"
-    "<div class='display'>Is this job<br><em>real?</em></div>"
+    "<div class='display'>TrustLens</div>"
+    "<div class='punch'>Spot the scam before it <em>spots</em> you.</div>"
     "<p class='lede'>Paste a job posting and get an explainable trust assessment — "
-    "score, red flags and reasoning — from heuristics, vector search and an LLM agent.</p>"
+    "score, red flags and reasoning — in seconds.</p>"
     "<div class='steps'>"
     "<div class='step'><span class='n'>(01)</span><span class='t'>Features</span>"
     "<span class='d'>Scam signals pulled from the text</span></div>"
