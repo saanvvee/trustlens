@@ -56,16 +56,15 @@ CSS = """
   color: var(--body); font-size: 1.05rem; line-height: 1.6;
 }
 
-/* clouds: fixed, heavily blurred, very faint, faded out toward the bottom */
+/* clouds: a clearly visible sky band behind the hero, fixed to the top of
+   the window and faded out with a mask so the lower page stays clean */
 .stApp::before {
-  content: ""; position: fixed; inset: -90px; z-index: 0; pointer-events: none;
-  background: __CLOUDS__ center top / cover no-repeat;
-  filter: blur(18px); opacity: 0.28;
-}
-.stApp::after {
-  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: linear-gradient(to bottom, rgba(244,247,250,0) 0%,
-              rgba(244,247,250,.25) 50%, rgba(244,247,250,.85) 88%, rgba(244,247,250,1) 100%);
+  content: ""; position: fixed; top: -20px; left: -20px; right: -20px; height: 80vh;
+  z-index: 0; pointer-events: none;
+  background: __CLOUDS__ center / cover no-repeat;
+  filter: blur(5px); opacity: 0.6;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
 }
 [data-testid="stAppViewContainer"] { position: relative; z-index: 1; background: transparent; }
 [data-testid="stMain"], [data-testid="stMainBlockContainer"] { background: transparent; }
@@ -80,12 +79,12 @@ header[data-testid="stHeader"] { background: transparent; }
 
 /* ---------- type ---------- */
 .eyebrow { font-size: .74rem; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--body); font-weight: 600; margin: 0 0 1rem 0; opacity: .85; }
+  color: #3B4651; font-weight: 600; margin: 0 0 1rem 0; opacity: .85; }
 .display { font-weight: 600; font-size: clamp(2.7rem, 7.5vw, 5rem); line-height: 1.02;
   letter-spacing: -0.03em; word-spacing: .06em; color: var(--ink); margin: 0; }
 .display em { font-style: italic; font-weight: 400;
   font-size: 1.1em; letter-spacing: -0.01em; }
-.stMarkdown .lede { color: var(--body); font-size: 1.12rem; line-height: 1.65; max-width: 580px;
+.stMarkdown .lede { color: #3B4651; font-size: 1.12rem; line-height: 1.65; max-width: 580px;
   margin: 2.6rem 0 0 0; }
 
 /* ---------- how-it-works list ---------- */
@@ -93,9 +92,9 @@ header[data-testid="stHeader"] { background: transparent; }
 .step { display: flex; gap: 1.5rem; padding: 1.1rem 0; align-items: baseline;
   border-bottom: 1px solid var(--soft); }
 .step:first-child { border-top: 1px solid var(--soft); }
-.step .n { color: #9AA6B2; font-size: .85rem; font-weight: 500; min-width: 2rem; }
+.step .n { color: #3B4651; font-size: .85rem; font-weight: 500; min-width: 2rem; }
 .step .t { color: var(--ink); font-weight: 600; min-width: 120px; }
-.step .d { color: var(--body); font-size: .98rem; }
+.step .d { color: #3B4651; font-size: .98rem; }
 
 /* ---------- inputs ---------- */
 [data-baseweb="textarea"] { background: #fff !important; border: 0 !important;
