@@ -9,30 +9,34 @@ import os
 import html
 import plotly.graph_objects as go
 
-from src.db import get_recent_predictions, init_db
+import storage
+import styles
+from src.db import init_db
 from src.pipeline import analyze_job
 from src.vector_store import VectorStore
 
 # absolute path so the DB lands in the project root no matter what
-# directory Streamlit was launched from
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trustlens.db")
+# directory Streamlit was launched from (storage.py picks a safe fallback
+# for read-only hosts)
+DB_PATH = storage.DB_PATH
+init_db(DB_PATH)  # the pipeline logs raw predictions here too
 
-# create the SQLite tables on app startup so the sidebar query
-# doesn't crash on a fresh install
-init_db(DB_PATH)
-
-ACTION_COLORS = {"avoid": "#ff6b6b", "caution": "#ffb454", "safe": "#4ade80"}
-ACTION_LABELS = {"avoid": "High risk — avoid", "caution": "Proceed with caution",
-                 "safe": "Looks legitimate"}
+# verdict -> (label shown in the UI, colour, headline)
+VERDICTS = {
+    "safe": ("SAFE", "#6fcf97", "Looks legitimate."),
+    "caution": ("CAUTION", "#e9b44c", "Proceed with caution."),
+    "avoid": ("SCAM", "#ef6b6b", "Likely a scam — avoid."),
+}
+FILTER_OPTIONS = {"All": "all", "Safe": "safe", "Caution": "caution", "Scam": "avoid"}
 
 EXAMPLES = {
-    "🚨 Scam example": (
+    "Scam example": (
         "URGENT HIRING!!! Work from home data entry. Earn $5,000 per week, no experience "
         "needed. Limited slots, apply immediately. A refundable registration fee of $99 "
         "is required to receive your starter kit. Send your full name, SSN and bank "
         "details to quickhire.jobs2024@gmail.com. We will contact you on WhatsApp."
     ),
-    "✅ Legit example": (
+    "Legit example": (
         "Software Engineer II — Payments, Acme Corp (Bengaluru, hybrid). We're looking "
         "for an engineer with 3+ years of experience in Python or Java to build and "
         "maintain our payment-processing services. Compensation: ₹28–36 LPA plus equity "
@@ -42,86 +46,47 @@ EXAMPLES = {
     ),
 }
 
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-html, body, [class*="css"], .stMarkdown, button, textarea { font-family: 'Inter', sans-serif; }
-#MainMenu, footer, header[data-testid="stHeader"] { visibility: hidden; height: 0; }
-.block-container { padding-top: 2rem; max-width: 1150px; }
+styles.inject()
 
-.hero { padding: 2.2rem 2rem; border-radius: 20px; margin-bottom: 1.2rem;
-  background: radial-gradient(circle at 15% 20%, rgba(124,156,255,.22), transparent 55%),
-              radial-gradient(circle at 90% 80%, rgba(74,222,128,.14), transparent 50%), #131a2b;
-  border: 1px solid rgba(255,255,255,.07); }
-.hero h1 { font-size: 2.6rem; font-weight: 800; margin: 0 0 .4rem 0; letter-spacing: -.02em;
-  background: linear-gradient(90deg, #fff, #9db4ff); -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent; }
-.hero p { color: #aab3c8; font-size: 1.05rem; margin: 0; max-width: 640px; }
 
-.steps { display: flex; gap: .7rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
-.step { flex: 1; min-width: 180px; padding: .9rem 1rem; border-radius: 14px;
-  background: #131a2b; border: 1px solid rgba(255,255,255,.06); }
-.step b { color: #9db4ff; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
-.step div { color: #cfd5e5; font-size: .92rem; margin-top: .2rem; }
-
-.verdict { padding: 1.3rem 1.5rem; border-radius: 16px; margin: 1rem 0;
-  background: #131a2b; border: 1px solid var(--c); box-shadow: 0 0 32px -12px var(--c); }
-.verdict .tag { display: inline-block; padding: .2rem .8rem; border-radius: 999px;
-  font-weight: 700; font-size: .78rem; letter-spacing: .08em; color: #0b0f1a; background: var(--c); }
-.verdict .msg { font-size: 1.5rem; font-weight: 700; margin-top: .5rem; color: #fff; }
-
-.chip { display: inline-block; margin: 3px 6px 3px 0; padding: 5px 13px; border-radius: 999px;
-  background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.4);
-  color: #ffb3b3; font-size: .88rem; }
-.card { padding: 1rem 1.2rem; border-radius: 14px; background: #131a2b;
-  border: 1px solid rgba(255,255,255,.06); color: #cfd5e5; line-height: 1.6; }
-.sim { padding: .6rem .8rem; border-radius: 10px; background: #0b0f1a; margin-bottom: .5rem;
-  border: 1px solid rgba(255,255,255,.06); }
-
-div.stButton > button[kind="primary"] { border-radius: 12px; font-weight: 600; padding: .6rem 1.6rem;
-  background: linear-gradient(90deg, #5b7cff, #8b6cff); border: none; }
-div.stButton > button { border-radius: 12px; }
-textarea { border-radius: 12px !important; }
-[data-testid="stSidebar"] { background: #0e1424; }
-</style>
-"""
+# ---------- charts ----------
+# displayModeBar False hides plotly's camera/zoom toolbar
+PLOT_CONFIG = {"displayModeBar": False}
 
 
 def _gauge(score, color):
+    """Slim arc with the score in the middle."""
     return go.Figure(go.Indicator(
         mode="gauge+number",
         value=score,
-        number={"font": {"size": 54, "color": "#fff"}},
-        title={"text": "Trust score", "font": {"size": 15, "color": "#aab3c8"}},
+        number={"font": {"size": 46, "color": "#ece9e1", "family": "Instrument Serif"}},
         gauge={
-            "axis": {"range": [0, 100], "tickcolor": "#566"},
-            "bar": {"color": color, "thickness": 0.28},
-            "bgcolor": "rgba(0,0,0,0)",
+            "axis": {"range": [0, 100], "tickcolor": "rgba(0,0,0,0)",
+                     "tickfont": {"color": "#8b8d93", "size": 10}, "nticks": 3},
+            "bar": {"color": color, "thickness": 0.18},
+            "bgcolor": "rgba(236,233,225,0.06)",
             "borderwidth": 0,
-            "steps": [
-                {"range": [0, 30], "color": "rgba(255,107,107,.18)"},
-                {"range": [30, 65], "color": "rgba(255,180,84,.18)"},
-                {"range": [65, 100], "color": "rgba(74,222,128,.18)"},
-            ],
         },
-    )).update_layout(height=270, margin=dict(l=30, r=40, t=50, b=10),
-                     paper_bgcolor="rgba(0,0,0,0)", font={"color": "#e6e9f2"})
+    )).update_layout(height=190, margin=dict(l=30, r=30, t=20, b=0),
+                     paper_bgcolor="rgba(0,0,0,0)", font={"color": "#ece9e1"})
 
 
 def _risk_bars(rb):
+    """Three thin horizontal bars."""
     keys = ["financial", "legitimacy", "data_privacy"]
     vals = [int(rb.get(k, 0)) for k in keys]
     return go.Figure(go.Bar(
         x=vals, y=[k.replace("_", " ") for k in keys], orientation="h",
-        marker={"color": ["#ff6b6b" if v > 60 else "#ffb454" if v > 30 else "#4ade80"
+        marker={"color": ["#ef6b6b" if v > 60 else "#e9b44c" if v > 30 else "#6fcf97"
                           for v in vals]},
-        text=vals, textposition="outside",
+        text=vals, textposition="outside", textfont={"color": "#8b8d93", "size": 11},
+        cliponaxis=False,
     )).update_layout(
-        height=240, margin=dict(l=10, r=30, t=10, b=10),
+        height=170, bargap=0.6, margin=dict(l=0, r=30, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        xaxis={"range": [0, 110], "title": "risk (higher = worse)",
-               "gridcolor": "rgba(255,255,255,.06)"},
-        yaxis={"autorange": "reversed"}, font={"color": "#e6e9f2"},
+        xaxis={"range": [0, 100], "visible": False},
+        yaxis={"autorange": "reversed", "tickfont": {"color": "#8b8d93", "size": 12}},
+        font={"color": "#ece9e1"},
     )
 
 
@@ -130,106 +95,194 @@ def _vs():
     return VectorStore()
 
 
+# ---------- callbacks (run before the page reruns) ----------
 def _load_example(key):
     st.session_state["posting"] = EXAMPLES[key]
 
 
-st.markdown(CSS, unsafe_allow_html=True)
+def _open_item(row_id):
+    """Reload a saved result into the main panel — no model call."""
+    saved = storage.get_result(row_id)
+    if saved:
+        st.session_state["current"] = saved
+        st.session_state["posting"] = saved["posting"]
 
+
+def _delete_item(row_id):
+    storage.delete_one(row_id)
+    cur = st.session_state.get("current")
+    if cur and cur.get("id") == row_id:
+        st.session_state["current"] = None
+
+
+def _clear_history():
+    storage.clear_all()
+    st.session_state["current"] = None
+    st.session_state["confirm_clear"] = False
+
+
+st.session_state.setdefault("current", None)
+st.session_state.setdefault("confirm_clear", False)
+
+
+# ---------- sidebar: persistent history ----------
+with st.sidebar:
+    st.markdown("<div class='brand'>TrustLens</div>", unsafe_allow_html=True)
+    st.markdown("<div class='eyebrow' style='margin-top:.2rem'>History</div>",
+                unsafe_allow_html=True)
+
+    search = st.text_input("Search", placeholder="Search postings…",
+                           label_visibility="collapsed")
+    choice = st.radio("Verdict", list(FILTER_OPTIONS), horizontal=True,
+                      label_visibility="collapsed")
+    rows = storage.list_history(search, FILTER_OPTIONS[choice])
+
+    if not rows:
+        st.caption("Nothing here yet." if not search and choice == "All"
+                   else "No matches.")
+
+    for r in rows:
+        label, color, _ = VERDICTS.get(r["verdict"], VERDICTS["caution"])
+        preview = r["posting_text"][:60] + ("…" if len(r["posting_text"]) > 60 else "")
+        st.markdown(
+            f"<div class='hist' style='--v:{color}'>"
+            f"<div class='row1'><span class='badge'>{label}</span>"
+            f"<span class='score'>{r['trust_score']}"
+            f" <span class='ago'>· {storage.time_ago(r['timestamp'])}</span></span></div>"
+            f"<div class='prev'>{html.escape(preview)}</div></div>",
+            unsafe_allow_html=True)
+        b1, b2 = st.columns(2)
+        b1.button("Open", key=f"open{r['id']}", on_click=_open_item, args=(r["id"],))
+        b2.button("Delete", key=f"del{r['id']}", on_click=_delete_item, args=(r["id"],))
+
+    # clear all, with a confirm step
+    if rows or st.session_state["confirm_clear"]:
+        st.markdown("<div class='hist'></div>", unsafe_allow_html=True)
+        if not st.session_state["confirm_clear"]:
+            if st.button("Clear history"):
+                st.session_state["confirm_clear"] = True
+                st.rerun()
+        else:
+            st.caption("Delete the whole history? This can't be undone.")
+            c1, c2 = st.columns(2)
+            c1.button("Yes, clear", on_click=_clear_history)
+            if c2.button("Cancel"):
+                st.session_state["confirm_clear"] = False
+                st.rerun()
+
+
+# ---------- main: hero ----------
 st.markdown(
-    "<div class='hero'><h1>TrustLens</h1>"
-    "<p>Paste a job posting and get an explainable scam-risk assessment — trust score, "
-    "red flags and reasoning — from a hybrid of heuristics, vector search and an LLM "
-    "agent.</p></div>"
+    "<div class='eyebrow'>Job posting scam detector</div>"
+    "<div class='display'>Is this job<br><em>real?</em></div>"
+    "<p class='lede'>Paste a job posting and get an explainable trust assessment — "
+    "score, red flags and reasoning — from heuristics, vector search and an LLM agent.</p>"
     "<div class='steps'>"
-    "<div class='step'><b>1 · Features</b><div>Heuristic scam signals extracted from the text</div></div>"
-    "<div class='step'><b>2 · Retrieval</b><div>Nearest known postings from a Chroma index</div></div>"
-    "<div class='step'><b>3 · Agent</b><div>LLM reasons over both and returns structured JSON</div></div>"
-    "</div>",
+    "<div class='step'><span class='n'>(01)</span><span class='t'>Features</span>"
+    "<span class='d'>Scam signals pulled from the text</span></div>"
+    "<div class='step'><span class='n'>(02)</span><span class='t'>Retrieval</span>"
+    "<span class='d'>Nearest known postings from a Chroma index</span></div>"
+    "<div class='step'><span class='n'>(03)</span><span class='t'>Agent</span>"
+    "<span class='d'>An LLM reasons over both and returns structured JSON</span></div>"
+    "</div><hr class='rule'>",
     unsafe_allow_html=True,
 )
 
-with st.sidebar:
-    st.markdown("### 🔍 TrustLens")
-    st.caption("QLoRA-tuned Phi-3-mini · LangChain · ChromaDB · Groq")
-    st.markdown("#### Recent analyses")
-    recent = get_recent_predictions(limit=10, path=DB_PATH)
-    if not recent:
-        st.caption("Nothing yet — run your first analysis.")
-    for r in recent:
-        with st.container(border=True):
-            st.markdown(f"**{r['action'].upper()}** · score {r['trust_score']}")
-            st.caption(r["job_text"][:120] + ("…" if len(r["job_text"]) > 120 else ""))
-
-    st.markdown("#### Similar past postings")
-    st.caption("Top 3 most similar from the training set.")
-    sim_placeholder = st.empty()
-
-st.markdown("##### Try it")
-ex_cols = st.columns(len(EXAMPLES) + 1)
+st.markdown("<div class='eyebrow'>Try it</div>", unsafe_allow_html=True)
+ex_cols = st.columns([1, 1, 3])
 for col, key in zip(ex_cols, EXAMPLES):
     col.button(key, on_click=_load_example, args=(key,), use_container_width=True)
 
 posting = st.text_area(
     "Job posting text",
-    height=220,
+    height=200,
     key="posting",
     label_visibility="collapsed",
-    placeholder="Paste the full posting here (title, description, salary, contact email)...",
+    placeholder="Paste the full posting here (title, description, salary, contact email)…",
 )
 
 if st.button("Analyze posting", type="primary", disabled=len(posting) < 50):
-    with st.spinner("Running the agent — this can take 30–60s on the free tier..."):
+    st.session_state["current"] = None
+    with st.status("Analyzing posting…", expanded=True) as status:
+        st.write("Extracting features, retrieving similar postings and running the agent. "
+                 "This can take 30–60s on the free tier.")
         result = analyze_job(posting, db_path=DB_PATH)
+        if "error" in result:
+            status.update(label="Analysis failed", state="error", expanded=True)
+        else:
+            status.update(label="Analysis complete", state="complete", expanded=False)
 
     if "error" in result:
         st.error(f"Couldn't get a clean assessment: {result['error']}")
         if "raw_output" in result:
             st.code(result["raw_output"])
     else:
-        action = str(result.get("action", "caution")).lower()
-        score = int(result.get("trust_score", 50))
-        color = ACTION_COLORS.get(action, "#8892a6")
-        st.markdown(
-            f"<div class='verdict' style='--c:{color}'>"
-            f"<span class='tag'>{action.upper()}</span>"
-            f"<div class='msg'>{ACTION_LABELS.get(action, action)}</div></div>",
-            unsafe_allow_html=True,
-        )
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.plotly_chart(_gauge(score, color), use_container_width=True)
-        with c2:
-            st.markdown("##### Risk breakdown")
-            st.plotly_chart(_risk_bars(result.get("risk_breakdown", {})),
-                            use_container_width=True)
-
-        st.markdown("##### Red flags")
-        flags = result.get("red_flags", [])
-        if flags:
-            st.markdown("".join(f"<span class='chip'>{html.escape(str(f))}</span>"
-                                for f in flags), unsafe_allow_html=True)
-        else:
-            st.caption("No red flags surfaced.")
-
-        st.markdown("##### Reasoning")
-        st.markdown(f"<div class='card'>{html.escape(str(result.get('reasoning', '—')))}</div>",
-                    unsafe_allow_html=True)
-
-        with st.expander("Heuristic features + neighbor fraud rate"):
-            st.json({"neighbor_fraud_rate": result.get("neighbor_fraud_rate"),
-                     "features": result.get("features")})
-
-        # update the sidebar similar-postings panel
+        # similar postings are stored with the result so reopening it later
+        # doesn't need the vector store
+        neighbors = []
         try:
-            sims = _vs().query(posting, k=3)
-            with sim_placeholder.container():
-                for s in sims:
-                    label_emoji = "🚨" if s["label"] == 1 else "✅"
-                    st.markdown(
-                        f"<div class='sim'>{label_emoji} <b>dist {s['distance']:.2f}</b><br>"
-                        f"<small>{html.escape(s['text'][:160])}…</small></div>",
-                        unsafe_allow_html=True)
+            for s in _vs().query(posting, k=3):
+                neighbors.append({"label": int(s["label"]),
+                                  "distance": float(s["distance"]),
+                                  "text": s["text"][:200]})
         except Exception as e:
-            sim_placeholder.warning(f"chroma query failed: {e}")
+            st.warning(f"Similar-postings lookup failed: {e}")
+
+        result["action"] = str(result.get("action", "caution")).lower()
+        row_id = storage.save_result(posting, result, neighbors)
+        st.session_state["current"] = {
+            "id": row_id, "posting": posting, "neighbors": neighbors,
+            "timestamp": storage._now(), "result": result,
+        }
+        st.rerun()  # redraw so the new item shows up in the sidebar
+
+
+# ---------- main: result panel ----------
+cur = st.session_state["current"]
+if cur:
+    result, neighbors = cur["result"], cur["neighbors"]
+    action = str(result.get("action", "caution")).lower()
+    label, color, headline = VERDICTS.get(action, VERDICTS["caution"])
+    score = int(result.get("trust_score", 50))
+
+    st.markdown(
+        f"<div class='verdict' style='--v:{color}'>"
+        f"<div class='tag'>{label} · SCORE {score}/100</div>"
+        f"<div class='msg'>{headline}</div>"
+        f"<div class='when'>Analyzed {storage.time_ago(cur['timestamp'])}</div></div>",
+        unsafe_allow_html=True)
+
+    c1, c2 = st.columns([1, 1.2], gap="large")
+    with c1:
+        st.markdown("<div class='eyebrow'>Trust score</div>", unsafe_allow_html=True)
+        st.plotly_chart(_gauge(score, color), use_container_width=True, config=PLOT_CONFIG)
+    with c2:
+        st.markdown("<div class='eyebrow'>Risk breakdown</div>", unsafe_allow_html=True)
+        st.plotly_chart(_risk_bars(result.get("risk_breakdown", {})),
+                        use_container_width=True, config=PLOT_CONFIG)
+
+    st.markdown("<div class='eyebrow' style='margin-top:1.5rem'>Red flags</div>",
+                unsafe_allow_html=True)
+    flags = result.get("red_flags", [])
+    if flags:
+        st.markdown("".join(f"<span class='pill'>{html.escape(str(f))}</span>"
+                            for f in flags), unsafe_allow_html=True)
+    else:
+        st.caption("No red flags surfaced.")
+
+    st.markdown("<div class='eyebrow' style='margin-top:1.5rem'>Reasoning</div>"
+                f"<div class='reason'>{html.escape(str(result.get('reasoning') or '—'))}</div>",
+                unsafe_allow_html=True)
+
+    if neighbors:
+        st.markdown("<div class='eyebrow' style='margin-top:2rem'>Similar past postings</div>",
+                    unsafe_allow_html=True)
+        for n in neighbors:
+            tag = "KNOWN SCAM" if n["label"] == 1 else "LEGITIMATE"
+            st.markdown(f"<div class='sim'><div class='top'>{tag} · distance "
+                        f"{n['distance']:.2f}</div><div class='txt'>"
+                        f"{html.escape(n['text'])}…</div></div>", unsafe_allow_html=True)
+
+    with st.expander("Heuristic features + neighbor fraud rate"):
+        st.json({"neighbor_fraud_rate": result.get("neighbor_fraud_rate"),
+                 "features": result.get("features")})
