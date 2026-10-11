@@ -1,0 +1,26 @@
+# Opens the live demo in a headless browser every 6 hours so the host's
+# idle-sleep timer never expires. Set the repo variable DEMO_URL
+# (Settings -> Secrets and variables -> Actions -> Variables), e.g.
+# https://your-app.streamlit.app or https://saanvee-trustlens.hf.space
+name: keep-alive
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  visit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install playwright && playwright install --with-deps chromium
+      - name: Visit demo
+        env:
+          DEMO_URL: ${{ vars.DEMO_URL }}
+        run: |
+          if [ -z "$DEMO_URL" ]; then echo "DEMO_URL not set"; exit 1; fi
+          python scripts/keep_alive.py "$DEMO_URL"
