@@ -21,11 +21,15 @@ from src.vector_store import VectorStore
 DB_PATH = storage.DB_PATH
 init_db(DB_PATH)  # the pipeline logs raw predictions here too
 
-# verdict -> (label shown in the UI, colour, headline)
+# verdict -> label, headline and pastel colours
+# color = dot / chart colour, tint = soft banner background, dark = readable text colour
 VERDICTS = {
-    "safe": ("SAFE", "#6fcf97", "Looks legitimate."),
-    "caution": ("CAUTION", "#e9b44c", "Proceed with caution."),
-    "avoid": ("SCAM", "#ef6b6b", "Likely a scam — avoid."),
+    "safe": {"label": "SAFE", "headline": "Looks legitimate.",
+             "color": "#8DB89B", "tint": "rgba(141,184,155,.18)", "dark": "#3E7355"},
+    "caution": {"label": "CAUTION", "headline": "Proceed with caution.",
+                "color": "#E8BE72", "tint": "rgba(232,190,114,.22)", "dark": "#8A6213"},
+    "avoid": {"label": "SCAM", "headline": "Likely a scam — avoid.",
+              "color": "#D98282", "tint": "rgba(217,130,130,.18)", "dark": "#9B4545"},
 }
 FILTER_OPTIONS = {"All": "all", "Safe": "safe", "Caution": "caution", "Scam": "avoid"}
 
@@ -59,34 +63,36 @@ def _gauge(score, color):
     return go.Figure(go.Indicator(
         mode="gauge+number",
         value=score,
-        number={"font": {"size": 46, "color": "#ece9e1", "family": "Instrument Serif"}},
+        number={"font": {"size": 44, "color": "#141618", "family": "Plus Jakarta Sans"}},
         gauge={
             "axis": {"range": [0, 100], "tickcolor": "rgba(0,0,0,0)",
-                     "tickfont": {"color": "#8b8d93", "size": 10}, "nticks": 3},
-            "bar": {"color": color, "thickness": 0.18},
-            "bgcolor": "rgba(236,233,225,0.06)",
+                     "tickfont": {"color": "#8B97A3", "size": 10}, "nticks": 3},
+            "bar": {"color": color, "thickness": 0.22},
+            "bgcolor": "#EEF2F6",
             "borderwidth": 0,
         },
     )).update_layout(height=190, margin=dict(l=30, r=30, t=20, b=0),
-                     paper_bgcolor="rgba(0,0,0,0)", font={"color": "#ece9e1"})
+                     paper_bgcolor="rgba(0,0,0,0)", font={"family": "Plus Jakarta Sans"})
 
 
 def _risk_bars(rb):
-    """Three thin horizontal bars."""
+    """Three thin horizontal bars, pastel-coloured by how risky each one is."""
     keys = ["financial", "legitimacy", "data_privacy"]
     vals = [int(rb.get(k, 0)) for k in keys]
+    pastel = lambda v: ("#D98282" if v > 60 else "#E8BE72" if v > 30 else "#8DB89B")
     return go.Figure(go.Bar(
         x=vals, y=[k.replace("_", " ") for k in keys], orientation="h",
-        marker={"color": ["#ef6b6b" if v > 60 else "#e9b44c" if v > 30 else "#6fcf97"
-                          for v in vals]},
-        text=vals, textposition="outside", textfont={"color": "#8b8d93", "size": 11},
+        marker={"color": [pastel(v) for v in vals]},
+        text=vals, textposition="outside", textfont={"color": "#5A6672", "size": 11},
         cliponaxis=False,
     )).update_layout(
         height=170, bargap=0.6, margin=dict(l=0, r=30, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        xaxis={"range": [0, 100], "visible": False},
-        yaxis={"autorange": "reversed", "tickfont": {"color": "#8b8d93", "size": 12}},
-        font={"color": "#ece9e1"},
+        xaxis={"range": [0, 100], "showgrid": True, "gridcolor": "rgba(20,22,24,.06)",
+               "zeroline": False, "tickvals": [0, 50, 100],
+               "tickfont": {"color": "#8B97A3", "size": 10}},
+        yaxis={"autorange": "reversed", "tickfont": {"color": "#5A6672", "size": 12}},
+        font={"family": "Plus Jakarta Sans"},
     )
 
 
@@ -142,22 +148,23 @@ with st.sidebar:
                    else "No matches.")
 
     for r in rows:
-        label, color, _ = VERDICTS.get(r["verdict"], VERDICTS["caution"])
+        v = VERDICTS.get(r["verdict"], VERDICTS["caution"])
         preview = r["posting_text"][:60] + ("…" if len(r["posting_text"]) > 60 else "")
-        st.markdown(
-            f"<div class='hist' style='--v:{color}'>"
-            f"<div class='row1'><span class='badge'>{label}</span>"
-            f"<span class='score'>{r['trust_score']}"
-            f" <span class='ago'>· {storage.time_ago(r['timestamp'])}</span></span></div>"
-            f"<div class='prev'>{html.escape(preview)}</div></div>",
-            unsafe_allow_html=True)
-        b1, b2 = st.columns(2)
-        b1.button("Open", key=f"open{r['id']}", on_click=_open_item, args=(r["id"],))
-        b2.button("Delete", key=f"del{r['id']}", on_click=_delete_item, args=(r["id"],))
+        # each history item is a small white card (styled via its key in styles.py)
+        with st.container(key=f"hist-{r['id']}"):
+            st.markdown(
+                f"<div class='hist' style='--v:{v['color']}'>"
+                f"<div class='row1'><span class='dot'></span>"
+                f"<span class='score'>{r['trust_score']}</span>"
+                f"<span class='ago'>{storage.time_ago(r['timestamp'])}</span></div>"
+                f"<div class='prev'>{html.escape(preview)}</div></div>",
+                unsafe_allow_html=True)
+            b1, b2, _sp = st.columns([1, 1, 1.4])
+            b1.button("Open", key=f"open{r['id']}", on_click=_open_item, args=(r["id"],))
+            b2.button("Delete", key=f"del{r['id']}", on_click=_delete_item, args=(r["id"],))
 
     # clear all, with a confirm step
     if rows or st.session_state["confirm_clear"]:
-        st.markdown("<div class='hist'></div>", unsafe_allow_html=True)
         if not st.session_state["confirm_clear"]:
             if st.button("Clear history"):
                 st.session_state["confirm_clear"] = True
@@ -184,12 +191,12 @@ st.markdown(
     "<span class='d'>Nearest known postings from a Chroma index</span></div>"
     "<div class='step'><span class='n'>(03)</span><span class='t'>Agent</span>"
     "<span class='d'>An LLM reasons over both and returns structured JSON</span></div>"
-    "</div><hr class='rule'>",
+    "</div>",
     unsafe_allow_html=True,
 )
 
 st.markdown("<div class='eyebrow'>Try it</div>", unsafe_allow_html=True)
-ex_cols = st.columns([1, 1, 3])
+ex_cols = st.columns([1.2, 1.2, 3])
 for col, key in zip(ex_cols, EXAMPLES):
     col.button(key, on_click=_load_example, args=(key,), use_container_width=True)
 
@@ -242,47 +249,49 @@ cur = st.session_state["current"]
 if cur:
     result, neighbors = cur["result"], cur["neighbors"]
     action = str(result.get("action", "caution")).lower()
-    label, color, headline = VERDICTS.get(action, VERDICTS["caution"])
+    v = VERDICTS.get(action, VERDICTS["caution"])
+    color = v["color"]
     score = int(result.get("trust_score", 50))
 
-    st.markdown(
-        f"<div class='verdict' style='--v:{color}'>"
-        f"<div class='tag'>{label} · SCORE {score}/100</div>"
-        f"<div class='msg'>{headline}</div>"
-        f"<div class='when'>Analyzed {storage.time_ago(cur['timestamp'])}</div></div>",
-        unsafe_allow_html=True)
+    with st.container(key="resultcard"):
+        st.markdown(
+            f"<div class='verdict' style='--vt:{v['tint']};--vd:{v['dark']}'>"
+            f"<div class='tag'>{v['label']} · SCORE {score}/100</div>"
+            f"<div class='msg'>{v['headline']}</div>"
+            f"<div class='when'>Analyzed {storage.time_ago(cur['timestamp'])}</div></div>",
+            unsafe_allow_html=True)
 
-    c1, c2 = st.columns([1, 1.2], gap="large")
-    with c1:
-        st.markdown("<div class='eyebrow'>Trust score</div>", unsafe_allow_html=True)
-        st.plotly_chart(_gauge(score, color), use_container_width=True, config=PLOT_CONFIG)
-    with c2:
-        st.markdown("<div class='eyebrow'>Risk breakdown</div>", unsafe_allow_html=True)
-        st.plotly_chart(_risk_bars(result.get("risk_breakdown", {})),
-                        use_container_width=True, config=PLOT_CONFIG)
+        c1, c2 = st.columns([1, 1.2], gap="large")
+        with c1:
+            st.markdown("<div class='eyebrow'>Trust score</div>", unsafe_allow_html=True)
+            st.plotly_chart(_gauge(score, color), use_container_width=True, config=PLOT_CONFIG)
+        with c2:
+            st.markdown("<div class='eyebrow'>Risk breakdown</div>", unsafe_allow_html=True)
+            st.plotly_chart(_risk_bars(result.get("risk_breakdown", {})),
+                            use_container_width=True, config=PLOT_CONFIG)
 
-    st.markdown("<div class='eyebrow' style='margin-top:1.5rem'>Red flags</div>",
-                unsafe_allow_html=True)
-    flags = result.get("red_flags", [])
-    if flags:
-        st.markdown("".join(f"<span class='pill'>{html.escape(str(f))}</span>"
-                            for f in flags), unsafe_allow_html=True)
-    else:
-        st.caption("No red flags surfaced.")
-
-    st.markdown("<div class='eyebrow' style='margin-top:1.5rem'>Reasoning</div>"
-                f"<div class='reason'>{html.escape(str(result.get('reasoning') or '—'))}</div>",
-                unsafe_allow_html=True)
-
-    if neighbors:
-        st.markdown("<div class='eyebrow' style='margin-top:2rem'>Similar past postings</div>",
+        st.markdown("<div class='eyebrow' style='margin-top:1.5rem'>Red flags</div>",
                     unsafe_allow_html=True)
-        for n in neighbors:
-            tag = "KNOWN SCAM" if n["label"] == 1 else "LEGITIMATE"
-            st.markdown(f"<div class='sim'><div class='top'>{tag} · distance "
-                        f"{n['distance']:.2f}</div><div class='txt'>"
-                        f"{html.escape(n['text'])}…</div></div>", unsafe_allow_html=True)
+        flags = result.get("red_flags", [])
+        if flags:
+            st.markdown("".join(f"<span class='pill'>{html.escape(str(f))}</span>"
+                                for f in flags), unsafe_allow_html=True)
+        else:
+            st.caption("No red flags surfaced.")
 
-    with st.expander("Heuristic features + neighbor fraud rate"):
-        st.json({"neighbor_fraud_rate": result.get("neighbor_fraud_rate"),
-                 "features": result.get("features")})
+        st.markdown("<div class='eyebrow' style='margin-top:1.5rem'>Reasoning</div>"
+                    f"<div class='reason'>{html.escape(str(result.get('reasoning') or '—'))}</div>",
+                    unsafe_allow_html=True)
+
+        if neighbors:
+            st.markdown("<div class='eyebrow' style='margin-top:2rem'>Similar past postings</div>",
+                        unsafe_allow_html=True)
+            for n in neighbors:
+                tag = "KNOWN SCAM" if n["label"] == 1 else "LEGITIMATE"
+                st.markdown(f"<div class='sim'><div class='top'>{tag} · distance "
+                            f"{n['distance']:.2f}</div><div class='txt'>"
+                            f"{html.escape(n['text'])}…</div></div>", unsafe_allow_html=True)
+
+        with st.expander("Heuristic features + neighbor fraud rate"):
+            st.json({"neighbor_fraud_rate": result.get("neighbor_fraud_rate"),
+                     "features": result.get("features")})

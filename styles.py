@@ -1,115 +1,173 @@
-"""All the custom CSS for the app in one place.
+"""All the custom CSS for the app, in one place.
 
-Direction: dark and editorial. Near-black background, one warm cream
-accent, big serif headings, hairline borders instead of boxed cards.
-Verdict colours (green / amber / red) are the only other colours and
-are set per-verdict from app.py through the --v CSS variable.
+Direction: light, airy and calm. Pale blue-white page, white cards with big
+radii and soft shadows, one desaturated blue accent, pastel verdict colours.
+A heavily blurred cloud photo (assets/clouds.jpg, public domain) sits fixed
+behind everything at very low opacity and fades out toward the bottom so
+text stays readable.
+
+The verdict colours are passed in per-element from app.py through the CSS
+variables --v (dot / bar), --vt (soft tint) and --vd (dark text version).
 """
+import base64
+import os
+
 import streamlit as st
+
+CLOUDS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "assets", "clouds.jpg")
+
+
+@st.cache_resource
+def _clouds_css():
+    """The photo inlined as a data URI so no static-file serving is needed.
+    If the file is missing the page just has no clouds — nothing crashes."""
+    try:
+        with open(CLOUDS_PATH, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        return f"url('data:image/jpeg;base64,{b64}')"
+    except OSError:
+        return "none"
+
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #0a0b0d;
-  --text: #ece9e1;
-  --mute: #8b8d93;
-  --line: rgba(236, 233, 225, 0.12);
-  --accent: #e9e4d4;
+  --bg: #F4F7FA;
+  --ink: #141618;
+  --body: #5A6672;
+  --accent: #7FA3C4;
+  --soft: rgba(20, 22, 24, 0.07);
+  --shadow: 0 10px 40px rgba(70, 100, 130, 0.10);
+  --shadow-sm: 0 2px 14px rgba(70, 100, 130, 0.10);
 }
 
 /* ---------- base ---------- */
-html, body, [class*="css"], .stMarkdown, button, input, textarea {
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
+/* streamlit sets its own font on nearly every element, so override them all
+   (except icons, code, the json viewer and the one italic serif word) */
+.stApp, .stApp *:not([data-testid="stIconMaterial"]):not(code):not(pre):not(em):not([data-testid="stJson"] *) {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
-.stApp { background: var(--bg); }
+.stApp .display em { font-family: 'Instrument Serif', serif !important; }
+.stApp { background: var(--bg); color: var(--body); }
+.stMarkdown p, .stMarkdown li, label, [data-testid="stCaptionContainer"] {
+  color: var(--body); font-size: 1.05rem; line-height: 1.6;
+}
+
+/* clouds: fixed, heavily blurred, very faint, faded out toward the bottom */
+.stApp::before {
+  content: ""; position: fixed; inset: -90px; z-index: 0; pointer-events: none;
+  background: __CLOUDS__ center top / cover no-repeat;
+  filter: blur(40px); opacity: 0.18;
+}
+.stApp::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(244,247,250,0) 0%,
+              rgba(244,247,250,.6) 45%, rgba(244,247,250,1) 85%);
+}
+[data-testid="stAppViewContainer"] { position: relative; z-index: 1; background: transparent; }
+[data-testid="stMain"], [data-testid="stMainBlockContainer"] { background: transparent; }
+[data-testid="stSidebar"] { z-index: 2; }
 
 /* hide streamlit chrome. The header stays (transparent) because the
    sidebar toggle lives in it on narrow screens. */
 #MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"],
 [data-testid="stStatusWidget"] { display: none !important; }
 header[data-testid="stHeader"] { background: transparent; }
-.block-container { padding-top: 2.5rem; padding-bottom: 5rem; max-width: 1000px; }
+.block-container { padding-top: 3.5rem; padding-bottom: 6rem; max-width: 980px; }
 
 /* ---------- type ---------- */
-.display { font-family: 'Instrument Serif', serif; font-weight: 400;
-  font-size: clamp(2.8rem, 8vw, 5.6rem); line-height: 1.0; letter-spacing: -0.02em;
-  margin: 1rem 0 0 0; color: var(--text); }
-.display em { font-style: italic; color: var(--accent); }
-.lede { color: var(--mute); font-size: 1.02rem; line-height: 1.65; max-width: 520px;
-  margin: 2.2rem 0 0 0; }
-.eyebrow { font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--mute); margin: 0 0 .9rem 0; }
-.h2 { font-family: 'Instrument Serif', serif; font-size: clamp(1.7rem, 4vw, 2.2rem);
-  margin: 0; letter-spacing: -0.01em; color: var(--text); }
-.h2 em { font-style: italic; color: var(--accent); }
-.rule { border: 0; border-top: 1px solid var(--line); margin: 3rem 0 2rem 0; }
+.eyebrow { font-size: .74rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--body); font-weight: 600; margin: 0 0 1rem 0; opacity: .85; }
+.display { font-weight: 600; font-size: clamp(2.7rem, 7.5vw, 5rem); line-height: 1.02;
+  letter-spacing: -0.03em; word-spacing: .06em; color: var(--ink); margin: 0; }
+.display em { font-style: italic; font-weight: 400;
+  font-size: 1.1em; letter-spacing: -0.01em; }
+.stMarkdown .lede { color: var(--body); font-size: 1.12rem; line-height: 1.65; max-width: 580px;
+  margin: 2.6rem 0 0 0; }
 
 /* ---------- how-it-works list ---------- */
-.steps { margin: 3rem 0 0 0; border-top: 1px solid var(--line); }
-.step { display: flex; gap: 1.4rem; padding: 1rem 0; border-bottom: 1px solid var(--line);
-  align-items: baseline; }
-.step .n { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--mute);
-  font-size: .95rem; min-width: 2rem; }
-.step .t { color: var(--text); font-weight: 500; min-width: 110px; }
-.step .d { color: var(--mute); font-size: .93rem; }
+.steps { margin: 3.2rem 0 3.5rem 0; }
+.step { display: flex; gap: 1.5rem; padding: 1.1rem 0; align-items: baseline;
+  border-bottom: 1px solid var(--soft); }
+.step:first-child { border-top: 1px solid var(--soft); }
+.step .n { color: #9AA6B2; font-size: .85rem; font-weight: 500; min-width: 2rem; }
+.step .t { color: var(--ink); font-weight: 600; min-width: 120px; }
+.step .d { color: var(--body); font-size: .98rem; }
 
 /* ---------- inputs ---------- */
-textarea { background: transparent !important; border: 1px solid var(--line) !important;
-  border-radius: 4px !important; color: var(--text) !important; line-height: 1.6 !important; }
-textarea:focus { border-color: var(--accent) !important; box-shadow: none !important; }
-[data-testid="stTextInput"] input, [data-baseweb="select"] > div {
-  background: transparent !important; border-color: var(--line) !important;
-  border-radius: 4px !important; }
+[data-baseweb="textarea"] { background: #fff !important; border: 0 !important;
+  border-radius: 20px !important; box-shadow: var(--shadow-sm); transition: box-shadow .15s; }
+[data-baseweb="textarea"]:focus-within { box-shadow: 0 0 0 3px rgba(127,163,196,.35), var(--shadow-sm); }
+textarea { background: transparent !important; color: var(--ink) !important;
+  line-height: 1.6 !important; padding: 1.1rem 1.3rem !important; font-size: 1rem !important; }
+textarea::placeholder { color: #8B97A3 !important; }
+[data-testid="stSidebar"] [data-baseweb="base-input"],
+[data-testid="stSidebar"] [data-baseweb="input"] { background: #F1F5F9 !important;
+  border: 0 !important; border-radius: 12px !important; }
+[data-testid="stSidebar"] [data-baseweb="input"]:focus-within { box-shadow: 0 0 0 3px rgba(127,163,196,.35); }
+input { color: var(--ink) !important; background: transparent !important; }
 
 /* ---------- buttons ---------- */
-.stButton > button { background: transparent; color: var(--text); border: 1px solid var(--line);
-  border-radius: 999px; font-size: .88rem; padding: .35rem 1.1rem; transition: all .15s; }
-.stButton > button:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
-.stButton > button[kind="primary"] { background: var(--accent); color: #0a0b0d; border: 0;
-  font-weight: 500; padding: .55rem 1.8rem; }
-.stButton > button[kind="primary"]:hover { background: #fff; color: #0a0b0d; }
-.stButton > button:disabled { opacity: .35; }
+.stButton > button { background: #fff; color: var(--ink); border: 0; border-radius: 999px;
+  box-shadow: var(--shadow-sm); font-weight: 500; font-size: .92rem; padding: .5rem 1.4rem;
+  transition: transform .15s, box-shadow .15s; white-space: nowrap; }
+.stButton > button:hover { transform: translateY(-1px); box-shadow: var(--shadow);
+  color: var(--ink); background: #fff; }
+.stButton > button[kind="primary"] { background: var(--ink); color: #fff;
+  padding: .7rem 2rem; font-weight: 600; }
+.stButton > button[kind="primary"]:hover { background: #2a2f33; color: #fff; }
+.stButton > button:disabled { opacity: .45; box-shadow: none; transform: none; }
 
-/* ---------- verdict banner ---------- */
-.verdict { border: 1px solid var(--v); border-radius: 6px; padding: 1.5rem 1.8rem;
-  margin: 2.2rem 0 1.4rem 0;
-  box-shadow: 0 0 40px -14px var(--v), inset 0 0 40px -30px var(--v);
-  background: color-mix(in srgb, var(--v) 5%, transparent); }
-.verdict .tag { font-size: .72rem; letter-spacing: .16em; color: var(--v); font-weight: 500; }
-.verdict .msg { font-family: 'Instrument Serif', serif; font-size: clamp(1.8rem, 5vw, 2.6rem);
-  line-height: 1.1; margin-top: .3rem; color: var(--text); }
-.verdict .when { color: var(--mute); font-size: .8rem; margin-top: .6rem; }
+/* ---------- status + expander ---------- */
+[data-testid="stStatus"] details, [data-testid="stExpander"] details {
+  background: #fff; border: 0 !important; border-radius: 16px; box-shadow: var(--shadow-sm); }
+[data-testid="stStatus"] summary p, [data-testid="stExpander"] summary p { color: var(--ink); }
 
-/* ---------- result bits ---------- */
-.pill { display: inline-block; margin: 0 8px 8px 0; padding: 4px 13px; border-radius: 999px;
-  border: 1px solid var(--line); color: var(--text); font-size: .82rem; }
-.reason { color: var(--text); line-height: 1.75; font-size: 1.02rem; max-width: 720px; }
-.sim { padding: .9rem 0; border-bottom: 1px solid var(--line); }
-.sim .top { font-size: .78rem; color: var(--mute); letter-spacing: .06em; }
-.sim .txt { color: var(--text); font-size: .92rem; margin-top: .25rem; opacity: .85; }
+/* ---------- result card ---------- */
+.st-key-resultcard { background: #fff; border-radius: 24px; box-shadow: var(--shadow);
+  padding: 2.2rem 2.4rem; margin-top: 2.5rem; }
+.verdict { background: var(--vt); border-radius: 16px; padding: 1.5rem 1.8rem;
+  margin-bottom: 2.2rem; }
+.verdict .tag { font-size: .74rem; letter-spacing: .14em; color: var(--vd); font-weight: 700; }
+.verdict .msg { font-size: clamp(1.6rem, 4.5vw, 2.3rem); font-weight: 600; line-height: 1.15;
+  letter-spacing: -0.02em; color: var(--ink); margin-top: .35rem; }
+.verdict .when { color: var(--body); font-size: .85rem; margin-top: .6rem; }
+.pill { display: inline-block; margin: 0 8px 8px 0; padding: 6px 14px; border-radius: 999px;
+  background: rgba(217,130,130,.14); color: #8F4545; font-size: .86rem; font-weight: 500; }
+.reason { color: var(--ink); line-height: 1.7; font-size: 1.05rem; max-width: 700px; opacity: .88; }
+.sim { padding: 1rem 0; border-bottom: 1px solid var(--soft); }
+.sim:last-child { border-bottom: 0; }
+.sim .top { font-size: .74rem; letter-spacing: .1em; color: var(--body); font-weight: 600; }
+.sim .txt { color: var(--ink); opacity: .8; font-size: .95rem; margin-top: .3rem; line-height: 1.55; }
 
 /* ---------- sidebar ---------- */
-[data-testid="stSidebar"] { background: #0c0d10; border-right: 1px solid var(--line); }
-[data-testid="stSidebar"] .block-container, [data-testid="stSidebarContent"] { padding-top: 1.5rem; }
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: .35rem; }
-.brand { font-family: 'Instrument Serif', serif; font-size: 1.7rem; color: var(--text); }
-.hist { padding-top: .8rem; border-top: 1px solid var(--line); margin-top: .6rem; }
-.hist .row1 { display: flex; justify-content: space-between; align-items: center; }
-.badge { font-size: .66rem; letter-spacing: .14em; color: var(--v); font-weight: 500; }
-.hist .score { color: var(--text); font-size: .85rem; }
-.hist .ago { color: var(--mute); font-size: .74rem; }
-.hist .prev { color: var(--mute); font-size: .82rem; margin: .25rem 0 .6rem 0; }
-[data-testid="stSidebar"] .stButton > button { font-size: .76rem; padding: .1rem .6rem;
-  color: var(--mute); white-space: nowrap; width: 100%; }
+[data-testid="stSidebar"] { background: #fff; border: 0; box-shadow: 6px 0 40px rgba(70,100,130,.10); }
+[data-testid="stSidebarContent"] { padding-top: 1.5rem; }
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: .6rem; }
+.brand { font-weight: 700; font-size: 1.5rem; letter-spacing: -0.03em; color: var(--ink); }
+[class*="st-key-hist-"] { background: #fff; border-radius: 16px; padding: .95rem 1rem .5rem 1rem;
+  box-shadow: 0 0 0 1px rgba(20,22,24,.04), var(--shadow-sm); gap: .25rem !important; }
+.hist .row1 { display: flex; align-items: center; gap: .55rem; }
+.hist .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--v); }
+.hist .score { color: var(--ink); font-weight: 600; font-size: .9rem; }
+.hist .ago { color: #6F7C89; font-size: .76rem; margin-left: auto; }
+.hist .prev { color: var(--body); font-size: .84rem; line-height: 1.45; margin: .35rem 0 .6rem 0; }
+/* quiet text buttons in the sidebar: colour only on hover */
+[data-testid="stSidebar"] .stButton > button { background: transparent; box-shadow: none;
+  color: #6F7C89; padding: .1rem .2rem; font-size: .8rem; font-weight: 500;
+  white-space: nowrap; width: auto; justify-content: flex-start; }
+[data-testid="stSidebar"] .stButton > button:hover { color: var(--accent); background: transparent;
+  transform: none; box-shadow: none; }
 
 /* ---------- narrow screens ---------- */
 @media (max-width: 700px) {
-  .block-container { padding-left: 1.1rem; padding-right: 1.1rem; padding-top: 1.5rem; }
+  .block-container { padding-left: 1.1rem; padding-right: 1.1rem; padding-top: 2.2rem; }
   .step { flex-wrap: wrap; gap: .3rem 1rem; }
   .step .t { min-width: 0; }
+  .st-key-resultcard { padding: 1.3rem 1.2rem; border-radius: 20px; }
   .verdict { padding: 1.1rem 1.2rem; }
 }
 </style>
@@ -118,4 +176,4 @@ textarea:focus { border-color: var(--accent) !important; box-shadow: none !impor
 
 def inject():
     """Call once near the top of app.py."""
-    st.markdown(CSS, unsafe_allow_html=True)
+    st.markdown(CSS.replace("__CLOUDS__", _clouds_css()), unsafe_allow_html=True)
