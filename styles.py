@@ -60,12 +60,12 @@ CSS = """
 .stApp::before {
   content: ""; position: fixed; inset: -90px; z-index: 0; pointer-events: none;
   background: __CLOUDS__ center top / cover no-repeat;
-  filter: blur(40px); opacity: 0.18;
+  filter: blur(18px); opacity: 0.28;
 }
 .stApp::after {
   content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background: linear-gradient(to bottom, rgba(244,247,250,0) 0%,
-              rgba(244,247,250,.6) 45%, rgba(244,247,250,1) 85%);
+              rgba(244,247,250,.25) 50%, rgba(244,247,250,.85) 88%, rgba(244,247,250,1) 100%);
 }
 [data-testid="stAppViewContainer"] { position: relative; z-index: 1; background: transparent; }
 [data-testid="stMain"], [data-testid="stMainBlockContainer"] { background: transparent; }
