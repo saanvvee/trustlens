@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustLens — Scam Job Posting Detector</title>
+<meta name="description" content="Paste a job posting, get an explainable scam-risk assessment. QLoRA-tuned Phi-3-mini, LangChain agent, ChromaDB retrieval.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0f1a;--card:#131a2b;--line:rgba(255,255,255,.07);--text:#e6e9f2;--mute:#aab3c8;--acc:#7c9cff;--good:#4ade80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;line-height:1.6}
+.wrap{max-width:1050px;margin:0 auto;padding:0 20px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+nav b{font-weight:800;font-size:1.1rem}
+nav a{color:var(--mute);text-decoration:none;margin-left:20px;font-size:.92rem}
+nav a:hover{color:#fff}
+.hero{padding:70px 0 50px;text-align:center;background:radial-gradient(circle at 20% 10%,rgba(124,156,255,.2),transparent 50%),radial-gradient(circle at 85% 60%,rgba(74,222,128,.12),transparent 45%)}
+h1{font-size:clamp(2.4rem,6vw,4rem);margin:0 0 14px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(90deg,#fff,#9db4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--mute);font-size:1.15rem;max-width:620px;margin:0 auto 28px}
+.btn{display:inline-block;padding:13px 26px;border-radius:12px;font-weight:600;text-decoration:none;margin:5px}
+.primary{background:linear-gradient(90deg,#5b7cff,#8b6cff);color:#fff}
+.ghost{border:1px solid var(--line);color:var(--text);background:var(--card)}
+.note{color:var(--mute);font-size:.85rem;margin-top:10px}
+section{padding:46px 0}
+h2{font-size:1.7rem;margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+.card b.k{color:var(--acc);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase}
+.card h3{margin:4px 0 6px;font-size:1.05rem}
+.card p{margin:0;color:var(--mute);font-size:.93rem}
+.stat{font-size:2.2rem;font-weight:800;color:var(--good)}
+img{width:100%;border-radius:16px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:16px;overflow:hidden;font-size:.93rem}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-weight:500;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em}
+tr.hl td{background:rgba(124,156,255,.1);font-weight:600}
+.tags span{display:inline-block;margin:4px 6px 4px 0;padding:5px 13px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:.86rem;color:var(--mute)}
+footer{padding:36px 0;color:var(--mute);text-align:center;font-size:.88rem;border-top:1px solid var(--line)}
+@media(max-width:600px){nav a{margin-left:12px}th,td{padding:10px 8px;font-size:.82rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav><b>🔍 TrustLens</b><div><a href="#how">How it works</a><a href="#results">Results</a><a href="https://github.com/saanvvee/trustlens">GitHub</a></div></nav>
+</div>
+
+<header class="hero"><div class="wrap">
+<h1>Spot scam job postings<br>before they spot you.</h1>
+<p>Paste a job or freelance posting and get an explainable trust assessment — score, red flags and reasoning — from heuristics, vector search and an LLM agent.</p>
+<a class="btn primary" href="https://saanvee-trustlens.hf.space" target="_blank" rel="noopener">Launch live demo →</a>
+<a class="btn ghost" href="https://github.com/saanvvee/trustlens" target="_blank" rel="noopener">View source</a>
+<div class="note">The demo runs on a free host — if it's asleep, give it ~30 seconds to wake up.</div>
+</div></header>
+
+<div class="wrap">
+<section><img src="dashboard.png" alt="TrustLens dashboard analysing a scam posting"></section>
+
+<section id="how">
+<h2>How it works</h2><p class="sub">A hybrid pipeline so every verdict is explainable.</p>
+<div class="grid">
+<div class="card"><b class="k">Step 1</b><h3>Heuristic features</h3><p>Urgency language, upfront-payment asks, free-webmail contacts, missing company signals and unrealistic pay.</p></div>
+<div class="card"><b class="k">Step 2</b><h3>Retrieval</h3><p>Sentence-transformer embeddings find the nearest labelled postings in a ChromaDB index.</p></div>
+<div class="card"><b class="k">Step 3</b><h3>LLM agent</h3><p>A LangChain agent reasons over both and returns structured JSON: score, flags, risk breakdown, action.</p></div>
+<div class="card"><b class="k">Step 4</b><h3>Logged &amp; auditable</h3><p>Every prediction is stored in SQLite and an error analyzer surfaces failure modes.</p></div>
+</div>
+</section>
+
+<section id="results">
+<h2>Results</h2><p class="sub">Action-F1 on a stratified validation subset (Kaggle fraudulent-postings labels).</p>
+<div class="grid" style="margin-bottom:18px">
+<div class="card"><div class="stat">+13%</div><p>relative F1 gain from QLoRA fine-tuning (0.421 → 0.476) over the un-tuned Phi-3-mini baseline</p></div>
+<div class="card"><div class="stat">0.36 → 0.45</div><p>recall improvement — more scams caught without extra false alarms</p></div>
+</div>
+<table>
+<tr><th>Model</th><th>F1</th><th>Precision</th><th>Recall</th></tr>
+<tr><td>DistilBERT classifier</td><td>0.154</td><td>0.500</td><td>0.091</td></tr>
+<tr><td>Phi-3-mini zero-shot</td><td>0.167</td><td>1.000</td><td>0.091</td></tr>
+<tr><td>Phi-3-mini baseline</td><td>0.421</td><td>0.500</td><td>0.364</td></tr>
+<tr class="hl"><td>Phi-3-mini + LoRA fine-tune</td><td>0.476</td><td>0.500</td><td>0.455</td></tr>
+<tr><td>Phi-3-mini few-shot (3-ICL)</td><td>0.710</td><td>0.550</td><td>1.000</td></tr>
+</table>
+<p class="note">Evaluated on N = 20 rows; see the repo for caveats and full breakdown.</p>
+<div style="margin-top:18px"><img src="comparison.png" alt="Model comparison chart"></div>
+</section>
+
+<section>
+<h2>Stack</h2>
+<div class="tags"><span>Python</span><span>Phi-3-mini</span><span>QLoRA / PEFT</span><span>LangChain</span><span>Groq</span><span>ChromaDB</span><span>sentence-transformers</span><span>SQLite</span><span>Streamlit</span><span>Docker</span><span>Hugging Face Spaces</span></div>
+</section>
+</div>
+
+<footer>Built by Saanvee Sharma · <a style="color:var(--acc)" href="https://github.com/saanvvee/trustlens">GitHub</a></footer>
+</body>
+</html>
